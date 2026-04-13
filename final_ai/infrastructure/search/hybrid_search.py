@@ -4,6 +4,10 @@ from final_ai.infrastructure.db.connection import get_db_connection
 from final_ai.infrastructure.embedding.fastembed_client import embed_query
 from final_ai.infrastructure.observability import get_logger
 from final_ai.infrastructure.repositories.product_filters import build_product_filter_clauses
+from final_ai.infrastructure.repositories.review_metrics_sql import (
+    ACTUAL_REVIEW_METRICS_COLUMNS,
+    ACTUAL_REVIEW_METRICS_JOIN,
+)
 
 logger = get_logger(__name__)
 
@@ -130,8 +134,9 @@ def hybrid_search_pg(
             SELECT goods_id, goods_name, pet_type, category, subcategory,
                    price, thumbnail_url, product_url, brand_name, discount_price,
                    popularity_score, sentiment_avg, repeat_rate, health_concern_tags,
-                   rating, review_count, main_ingredients
+                   """ + ACTUAL_REVIEW_METRICS_COLUMNS + """, main_ingredients
             FROM product
+            """ + ACTUAL_REVIEW_METRICS_JOIN + """
             WHERE 1=1 {filters}
             ORDER BY embedding <=> %s::vector
             LIMIT 100
@@ -140,8 +145,9 @@ def hybrid_search_pg(
             SELECT goods_id, goods_name, pet_type, category, subcategory,
                    price, thumbnail_url, product_url, brand_name, discount_price,
                    popularity_score, sentiment_avg, repeat_rate, health_concern_tags,
-                   rating, review_count, main_ingredients
+                   """ + ACTUAL_REVIEW_METRICS_COLUMNS + """, main_ingredients
             FROM product
+            """ + ACTUAL_REVIEW_METRICS_JOIN + """
             WHERE search_vector @@ plainto_tsquery('simple', %s) {filters}
             ORDER BY ts_rank(search_vector, plainto_tsquery('simple', %s)) DESC
             LIMIT 100
@@ -217,9 +223,10 @@ def hybrid_search_pg(
                     SELECT goods_id, goods_name, pet_type, category, subcategory,
                            price, thumbnail_url, product_url, brand_name, discount_price,
                            popularity_score, sentiment_avg, repeat_rate, health_concern_tags,
-                           rating, review_count, main_ingredients,
+                           {ACTUAL_REVIEW_METRICS_COLUMNS}, main_ingredients,
                            ({' + '.join(score_parts)}) AS loose_score
                     FROM product
+                    {ACTUAL_REVIEW_METRICS_JOIN}
                     WHERE 1=1 {filter_str}
                       AND ({' OR '.join(where_parts)})
                     ORDER BY loose_score DESC,

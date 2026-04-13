@@ -2,6 +2,10 @@ import psycopg2.extras
 
 from final_ai.infrastructure.db.connection import get_db_connection
 from final_ai.infrastructure.repositories.product_filters import build_product_filter_clauses
+from final_ai.infrastructure.repositories.review_metrics_sql import (
+    ACTUAL_REVIEW_METRICS_COLUMNS,
+    ACTUAL_REVIEW_METRICS_JOIN,
+)
 
 
 def list_products(
@@ -44,10 +48,12 @@ def list_products(
             params.extend([like, like])
 
         sql = (
-            "SELECT goods_id, goods_name, brand_name, price, discount_price, rating, review_count, "
+            "SELECT goods_id, goods_name, brand_name, price, discount_price, "
+            f"{ACTUAL_REVIEW_METRICS_COLUMNS}, "
             "thumbnail_url, product_url, soldout_yn, pet_type, category, subcategory, "
             "popularity_score, sentiment_avg, repeat_rate "
             "FROM product "
+            f"{ACTUAL_REVIEW_METRICS_JOIN} "
             "WHERE " + " AND ".join(filters) + " "
             "ORDER BY popularity_score DESC NULLS LAST, review_count DESC NULLS LAST, goods_id ASC "
             "LIMIT %s OFFSET %s"
@@ -102,8 +108,9 @@ def list_gp_products(
             "SELECT goods_id, goods_name, pet_type, category, subcategory, "
             "price, thumbnail_url, product_url, brand_name, discount_price, "
             "popularity_score, sentiment_avg, repeat_rate, health_concern_tags, "
-            "rating, review_count, main_ingredients "
+            f"{ACTUAL_REVIEW_METRICS_COLUMNS}, main_ingredients "
             "FROM product "
+            f"{ACTUAL_REVIEW_METRICS_JOIN} "
             "WHERE " + " AND ".join(filters) + " "
             "ORDER BY popularity_score DESC NULLS LAST, review_count DESC NULLS LAST "
             "LIMIT %s"
